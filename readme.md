@@ -6,7 +6,7 @@
 * Initialize a new python virtual environment
 `python -m virtualenv venv`
 * Install the required python modules
-`.\venv\bin\python -m pip -r requirements.txt`
+`./venv/bin/python -m pip -r requirements.txt`
 
 ## Usage
 * Create or modify one of the YAML files in the repo as needed (see examples folder)
