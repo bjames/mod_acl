@@ -1,0 +1,14 @@
+threads: 8
+append: False
+extended: True
+print_result: True
+export_result: False
+acl_name: ntn
+acl_lines: |
+ deny ip host 172.16.12.148 any
+ permit ip host 172.16.12.20 any
+device_list:
+  - hostname: 172.16.12.117
+    device_type: cisco_ios
+  - hostname: 172.16.12.116
+    device_type: cisco_nxos
