@@ -69,6 +69,10 @@ def get_valid_credentials(hostname, device_type):
 
 def nxos_mod_acl(ssh_session, device, acl_name, acl_lines, append):
 
+    """
+        Updates ACLs on cisco_nxos devices
+    """
+
     if not append:
         # remove the old ACL
         ssh_session.send_config_set('no ip access-list {}'.format(acl_name))
@@ -77,8 +81,8 @@ def nxos_mod_acl(ssh_session, device, acl_name, acl_lines, append):
     config_set = ['ip access-list {}'.format(acl_name)]
     config_set = config_set + acl_lines.splitlines()
 
-    # command input on nexus devices is slow, doubling the delay factor will prevent errors
-    ssh_session.send_config_set(config_set, delay_factor = 2)
+    # command input on nexus devices is slow, so we use a delay_factor of 10 to slow down the input and prevent timeouts
+    ssh_session.send_config_set(config_set, delay_factor = 10)
 
     result = ssh_session.send_command('show ip access-list {}'.format(acl_name))
 
@@ -86,6 +90,10 @@ def nxos_mod_acl(ssh_session, device, acl_name, acl_lines, append):
 
 
 def ios_mod_acl(ssh_session, device, acl_name, acl_lines, append, extended):
+
+    """
+        Updates ACLs on cisco_ios devices
+    """
 
     if not append:
         # remove the old ACL
@@ -118,7 +126,7 @@ def mod_acl(acl_name, acl_lines, append, extended, username, password, device):
     except Exception as e:
 
         print('error {}'.format(device['hostname']))
-        return {'device': device['hostname'], 'result': e}
+        return {'device': device['hostname'], 'device_type': device['device_type'], 'result': e}
 
 
     try:
@@ -138,19 +146,14 @@ def mod_acl(acl_name, acl_lines, append, extended, username, password, device):
 
     print('{} completed'.format(device['hostname']))
 
-    return {'device': device['hostname'], 'result': result}
-
-
-def write_results(results):
-
-    filename = 'mod_acl_results{}.json'.format(datetime.now().replace(microsecond=0).isoformat())
-
-    with open(filename, 'w') as f:
-
-        f.write(dumps(results))
+    return {'device': device['hostname'], 'device_type': device['device_type'], 'result': result}
 
 
 def verify(acl_name, append):
+
+    """
+        Asks the user to verify settings in the YAML file
+    """
 
     if append:
 
@@ -173,6 +176,54 @@ def verify(acl_name, append):
         return False
 
 
+def validation(results):
+
+    """
+        Basic validation
+        
+        It's up to the user to read the results and verify consistancy between the length of ACLs on each device.
+
+        If nexus_diff or ios_diff is True, then a difference was found between the number of lines for devices of that device type
+    """
+
+    validation_results = {'nexus': [], 'ios': [], 'nexus_diff': False, 'ios_diff': False}
+
+    nexus_first_count = -1
+    ios_first_count = -1
+
+    for device in results:
+
+        try:
+            line_count = len(device['result'].splitlines())
+        except AttributeError:
+            line_count = 0
+
+        result = {
+            'hostname': device['device'],
+            'device_type': device['device_type'],
+            'result_lines': line_count
+        }
+
+        if device['device_type'] == 'cisco_nxos':
+            
+            if nexus_first_count == -1:
+                nexus_first_count = line_count
+            elif nexus_first_count != line_count:
+                validation_results['nexus_diff'] = True
+
+            validation_results['nexus'].append(result)
+        elif device['device_type'] == 'cisco_ios':
+
+            if ios_first_count == -1:
+                ios_first_count = line_count
+            elif ios_first_count != line_count:
+                validation_results['ios_diff'] = True
+
+            validation_results['ios'].append(result)
+
+    return validation_results
+
+
 def main():
 
     try:
@@ -185,11 +236,14 @@ def main():
         exit()
 
 
+    # End the script if the settings are incorrect
     if not verify(script_settings['acl_name'], script_settings['append']):
         exit()
 
+    # Get working credentials from the user
     username, password = get_valid_credentials(script_settings['device_list'][0]['hostname'], script_settings['device_list'][0]['device_type']) 
 
+    # Spawn the number of threads configured in the YAML file
     with Pool(script_settings['threads']) as pool:
 
         results = pool.map(partial(mod_acl,
@@ -201,11 +255,14 @@ def main():
                          password),
                  script_settings['device_list'])
 
+    print('\nFULL RESULTS\n_________________')
+
     pprint(results)
 
-    if script_settings['export_result']:
+    print('\nSUMMARY RESULTS\n_________________')
+    validation_results = validation(results)
 
-        write_results(results)
+    pprint(validation_results)
 
 
 main()

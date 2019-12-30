@@ -2,14 +2,14 @@
 
 ## Installation
 * Clone the repository
-`git clone --rescurse-submodules https://github.com/bjames/mod_acl`
+`git clone https://github.com/bjames/mod_acl`
 * Initialize a new python virtual environment
 `python -m virtualenv venv`
 * Install the required python modules
 `./venv/bin/python -m pip -r requirements.txt`
 
 ## Usage
-* Create or modify one of the YAML files in the repo as needed (see examples folder)
+* Create a new YAML file or modify the provided YAML file
 * device_list entries should have a hostname and device_type (either cisco_ios or cisco_nxos)
 ```
     - hostname: 172.16.12.117

@@ -1,14 +1,20 @@
 threads: 8
 append: False
 extended: True
-print_result: True
-export_result: False
 acl_name: ntn
 acl_lines: |
+ remark deny traffic from desktop
  deny ip host 172.16.12.148 any
+ remark permit traffic from jumpbox
  permit ip host 172.16.12.20 any
 device_list:
-  - hostname: 172.16.12.117
+  - hostname: 172.16.12.112
     device_type: cisco_ios
-  - hostname: 172.16.12.116
+  - hostname: 172.16.12.110
+    device_type: cisco_ios
+  - hostname: 172.16.12.109
+    device_type: cisco_ios
+  - hostname: 172.16.12.111
+    device_type: cisco_nxos
+  - hostname: 172.16.12.222
     device_type: cisco_nxos
